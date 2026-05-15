@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ai-sentence-splitter-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false   # You will manually enter this in Render dashboard
+
+  - type: static
+    name: ai-sentence-splitter-frontend
+    rootDir: frontend
+    buildCommand: ""
+    staticPublishPath: .
