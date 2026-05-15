@@ -4,7 +4,7 @@ from groq import Groq
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
