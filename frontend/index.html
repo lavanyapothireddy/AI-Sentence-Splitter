@@ -104,10 +104,7 @@
       transition: border-color 0.2s;
     }
 
-    textarea:focus {
-      border-color: var(--accent);
-    }
-
+    textarea:focus { border-color: var(--accent); }
     textarea::placeholder { color: var(--muted); }
 
     .char-count {
@@ -134,8 +131,6 @@
       border-radius: 12px;
       cursor: pointer;
       transition: opacity 0.2s, transform 0.15s;
-      position: relative;
-      overflow: hidden;
     }
 
     button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
@@ -256,6 +251,21 @@
       animation: fadeUp 0.4s ease both;
     }
 
+    .wake-notice {
+      width: 100%;
+      max-width: 800px;
+      margin-top: 20px;
+      background: rgba(124,106,247,0.07);
+      border: 1px solid rgba(124,106,247,0.2);
+      border-radius: 12px;
+      padding: 12px 18px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      text-align: center;
+      display: none;
+    }
+
     @keyframes fadeDown { from { opacity:0; transform: translateY(-18px); } to { opacity:1; transform:none; } }
     @keyframes fadeUp   { from { opacity:0; transform: translateY(16px); }  to { opacity:1; transform:none; } }
     @keyframes spin     { to   { transform: rotate(360deg); } }
@@ -278,7 +288,12 @@
     </button>
   </div>
 
+  <div id="wakeNotice" class="wake-notice">
+    ⏳ Server is waking up from sleep (free tier). This may take up to 50 seconds on the first request...
+  </div>
+
   <div id="errorBox" class="error-box" style="display:none;"></div>
+
   <div id="results" class="results" style="display:none;">
     <div class="results-header">
       <span class="results-title">Sentences</span>
@@ -289,8 +304,9 @@
   </div>
 
   <script>
-    // 🔁 Replace with your Render backend URL after deployment
-    const API_URL = "https://ai-sentence-splitter.onrender.com";
+    // ✅ REPLACE THIS with your actual Render backend URL
+    // Example: "https://ai-sentence-splitter-backend.onrender.com"
+    const API_URL = "https://YOUR-BACKEND-NAME.onrender.com";
 
     const textarea = document.getElementById("inputText");
     const charCount = document.getElementById("charCount");
@@ -302,6 +318,7 @@
     });
 
     let lastSentences = [];
+    let wakeTimer = null;
 
     async function splitSentences() {
       const text = textarea.value.trim();
@@ -311,22 +328,33 @@
       const btnText = document.getElementById("btnText");
       const errorBox = document.getElementById("errorBox");
       const results = document.getElementById("results");
+      const wakeNotice = document.getElementById("wakeNotice");
 
       btn.disabled = true;
       btnText.innerHTML = '<span class="spinner"></span>Splitting...';
       errorBox.style.display = "none";
       results.style.display = "none";
+      wakeNotice.style.display = "none";
+
+      // Show wake-up notice after 5 seconds if still waiting
+      wakeTimer = setTimeout(() => {
+        wakeNotice.style.display = "block";
+      }, 5000);
 
       try {
         const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
-const res = await fetch(`${API_URL}/split`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ text }),
-  signal: controller.signal
-});
-clearTimeout(timeout);
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+        const res = await fetch(`${API_URL}/split`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+        clearTimeout(wakeTimer);
+        wakeNotice.style.display = "none";
 
         const data = await res.json();
 
@@ -338,13 +366,19 @@ clearTimeout(timeout);
         lastSentences = data.sentences;
         renderResults(data.sentences);
 
-      }} catch (err) {
-  if (err.name === "AbortError") {
-    showError("Request timed out. The server may be waking up — please try again in 30 seconds.");
-  } else {
-    showError("Cannot reach the server. Check that API_URL is set to your Render backend URL.");
-  }
-}finally {
+      } catch (err) {
+        clearTimeout(wakeTimer);
+        wakeNotice.style.display = "none";
+
+        if (err.name === "AbortError") {
+          showError("Request timed out. The server is still waking up — please wait 30 seconds and try again.");
+        } else {
+          showError(
+            "Cannot reach the server. Make sure: (1) Your backend is deployed on Render, " +
+            "(2) API_URL in index.html is updated to your actual Render backend URL."
+          );
+        }
+      } finally {
         btn.disabled = false;
         btnText.innerHTML = "✦ Split Sentences";
       }
