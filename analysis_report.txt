@@ -1,0 +1,7 @@
+TEXT ANALYSIS REPORT
+====================
+
+SUMMARY:
+- Document is too short for a multi-point summary.
+
+KEYWORDS: enable, javascript, cookies, continue
