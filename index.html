@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Sentence Splitter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --accent: #7c6af7;
+      --accent2: #f76a8a;
+      --text: #e8e6ff;
+      --muted: #6e6a8a;
+      --card: #161622;
+    }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,106,247,0.15), transparent);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeDown 0.7s ease both;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      border: 1px solid rgba(124,106,247,0.3);
+      padding: 4px 14px;
+      border-radius: 100px;
+      margin-bottom: 18px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 400;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 800px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      animation: fadeUp 0.7s ease both 0.1s;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 16px;
+      resize: vertical;
+      min-height: 160px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    .char-count {
+      text-align: right;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .char-count.warn { color: var(--accent2); }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #9b6af7);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    .results {
+      width: 100%;
+      max-width: 800px;
+      margin-top: 28px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .count-badge {
+      background: rgba(124,106,247,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(124,106,247,0.3);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+    }
+
+    .sentence-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sentence-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      transition: border-color 0.2s, transform 0.15s;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .sentence-item:hover {
+      border-color: var(--accent);
+      transform: translateX(4px);
+    }
+
+    .sentence-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      min-width: 24px;
+      padding-top: 2px;
+    }
+
+    .sentence-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .copy-btn {
+      margin-top: 16px;
+      width: auto;
+      padding: 10px 22px;
+      background: transparent;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .copy-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: transparent;
+    }
+
+    .error-box {
+      width: 100%;
+      max-width: 800px;
+      margin-top: 20px;
+      background: rgba(247,106,138,0.08);
+      border: 1px solid rgba(247,106,138,0.25);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: var(--accent2);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    @keyframes fadeDown { from { opacity:0; transform: translateY(-18px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp   { from { opacity:0; transform: translateY(16px); }  to { opacity:1; transform:none; } }
+    @keyframes spin     { to   { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">⚡ Powered by Groq + LLaMA 3</div>
+    <h1>AI Sentence Splitter</h1>
+    <p class="subtitle">Paste any text. Get clean, intelligent sentence splits.</p>
+  </header>
+
+  <div class="card">
+    <label for="inputText">Input Text</label>
+    <textarea id="inputText" placeholder="Paste your paragraph here... e.g. Dr. Smith went to Washington. He met Mr. Jones, the U.S. ambassador. They discussed A.I. trends." maxlength="5000"></textarea>
+    <div class="char-count" id="charCount">0 / 5000</div>
+    <button id="splitBtn" onclick="splitSentences()">
+      <span id="btnText">✦ Split Sentences</span>
+    </button>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+  <div id="results" class="results" style="display:none;">
+    <div class="results-header">
+      <span class="results-title">Sentences</span>
+      <span class="count-badge" id="countBadge">0 sentences</span>
+    </div>
+    <div class="sentence-list" id="sentenceList"></div>
+    <button class="copy-btn" onclick="copyAll()">⎘ Copy All as JSON</button>
+  </div>
+
+  <script>
+    // 🔁 Replace with your Render backend URL after deployment
+    const API_URL = "https://your-backend-service.onrender.com";
+
+    const textarea = document.getElementById("inputText");
+    const charCount = document.getElementById("charCount");
+
+    textarea.addEventListener("input", () => {
+      const len = textarea.value.length;
+      charCount.textContent = `${len} / 5000`;
+      charCount.classList.toggle("warn", len > 4500);
+    });
+
+    let lastSentences = [];
+
+    async function splitSentences() {
+      const text = textarea.value.trim();
+      if (!text) { showError("Please enter some text first."); return; }
+
+      const btn = document.getElementById("splitBtn");
+      const btnText = document.getElementById("btnText");
+      const errorBox = document.getElementById("errorBox");
+      const results = document.getElementById("results");
+
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="spinner"></span>Splitting...';
+      errorBox.style.display = "none";
+      results.style.display = "none";
+
+      try {
+        const res = await fetch(`${API_URL}/split`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showError(data.error || "Something went wrong. Please try again.");
+          return;
+        }
+
+        lastSentences = data.sentences;
+        renderResults(data.sentences);
+
+      } catch (err) {
+        showError("Cannot reach the server. Make sure the backend is deployed and API_URL is set correctly.");
+      } finally {
+        btn.disabled = false;
+        btnText.innerHTML = "✦ Split Sentences";
+      }
+    }
+
+    function renderResults(sentences) {
+      const list = document.getElementById("sentenceList");
+      const countBadge = document.getElementById("countBadge");
+      const results = document.getElementById("results");
+
+      list.innerHTML = "";
+      countBadge.textContent = `${sentences.length} sentence${sentences.length !== 1 ? "s" : ""}`;
+
+      sentences.forEach((s, i) => {
+        const item = document.createElement("div");
+        item.className = "sentence-item";
+        item.style.animationDelay = `${i * 0.05}s`;
+        item.innerHTML = `
+          <span class="sentence-num">#${String(i + 1).padStart(2, "0")}</span>
+          <span class="sentence-text">${escapeHtml(s)}</span>
+        `;
+        list.appendChild(item);
+      });
+
+      results.style.display = "block";
+    }
+
+    function showError(msg) {
+      const box = document.getElementById("errorBox");
+      box.textContent = "⚠ " + msg;
+      box.style.display = "block";
+    }
+
+    function copyAll() {
+      navigator.clipboard.writeText(JSON.stringify(lastSentences, null, 2))
+        .then(() => alert("Copied to clipboard as JSON!"))
+        .catch(() => alert("Copy failed. Please copy manually."));
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+  </script>
+
+</body>
+</html>
